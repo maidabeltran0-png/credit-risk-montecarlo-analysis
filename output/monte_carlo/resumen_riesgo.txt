@@ -1,0 +1,5 @@
+Resumen de riesgo de cartera (Monte Carlo)
+Expected Loss: 30,751,458.91
+VaR 95%: 31,289,473.12
+VaR 99%: 31,509,590.74
+Expected Shortfall 95%: 31,426,224.52

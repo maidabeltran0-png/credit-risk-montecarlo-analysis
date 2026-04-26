@@ -1,0 +1,13 @@
+columnas,nulos,tipo
+person_age,0,int64
+person_income,0,int64
+person_home_ownership,0,object
+person_emp_length,827,float64
+loan_intent,0,object
+loan_grade,0,object
+loan_amnt,0,int64
+loan_int_rate,0,float64
+loan_status,0,int64
+loan_percent_income,0,float64
+cb_person_default_on_file,0,object
+cb_person_cred_hist_length,0,int64

@@ -1,0 +1,26 @@
+# Data
+data/raw/
+data/clean/
+data/processed/
+data/*.csv
+
+# Python
+scripts/__pycache__/
+scripts/old/
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+src/credit_risk/__pycache__/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
