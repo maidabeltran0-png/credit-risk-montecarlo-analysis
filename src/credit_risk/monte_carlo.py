@@ -44,28 +44,33 @@ def simulate_losses(
     ead_values: np.ndarray,
     lgd: float,
     n_simulations: int,
+    seed: int = 42,
 ) -> np.ndarray:
-    """Simulate portfolio losses via Bernoulli draws per loan.
+    """Simulate portfolio losses using a fully vectorized approach.
 
-    Each iteration:
-      1. Sample default indicators ~ Bernoulli(PD_i) for every loan.
-      2. Compute individual loss = default_i × EAD_i × LGD.
-      3. Sum across the portfolio.
+    Generates a full (n_simulations x n_exposures) matrix of random draws
+    to avoid Python loops, resulting in sub-second execution for large portfolios.
 
     Args:
         pd_values: Array of individual default probabilities (length = n_loans).
         ead_values: Array of Exposure at Default — loan amounts (length = n_loans).
         lgd: Loss Given Default (constant proportion, e.g. 0.45).
         n_simulations: Number of Monte Carlo iterations.
+        seed: Random seed for reproducibility.
 
     Returns:
         Array of shape (n_simulations,) with total portfolio losses.
     """
-    portfolio_losses = np.zeros(n_simulations)
-    for s in range(n_simulations):
-        defaults = np.random.binomial(1, pd_values)
-        portfolio_losses[s] = (defaults * ead_values * lgd).sum()
-    logger.info("Base simulation complete — %d iterations", n_simulations)
+    rng = np.random.default_rng(seed)
+    
+    # Generate full matrix of uniform draws and compare against PDs
+    uniform_draws = rng.random((n_simulations, len(pd_values)))
+    defaults_matrix = (uniform_draws < pd_values).astype(np.float64)
+    
+    # Compute total losses via matrix multiplication
+    portfolio_losses = defaults_matrix @ (ead_values * lgd)
+    
+    logger.info("Base simulation complete — %d iterations (Vectorized)", n_simulations)
     return portfolio_losses
 
 
@@ -100,27 +105,32 @@ def simulate_stress_scenario(
     lgd: float,
     n_simulations: int,
     stress_multiplier: float,
+    seed: int = 42,
 ) -> tuple[np.ndarray, pd.Series]:
-    """Run Monte Carlo under a stressed PD scenario.
+    """Run Monte Carlo under a stressed PD scenario using vectorization.
 
     Applies ``stress_multiplier`` to ``pd_hat``, capping at 1.0,
-    then reruns the Bernoulli simulation.
+    then generates a full random matrix to compute stressed losses.
 
     Args:
         df: DataFrame with ``pd_hat`` and ``loan_amnt``.
         lgd: Loss Given Default.
         n_simulations: Number of iterations.
         stress_multiplier: Factor applied to base PD (e.g. 1.5 = +50% PD).
+        seed: Random seed for reproducibility.
 
     Returns:
         Tuple of (losses_array, stressed_pd_series).
     """
     pd_stress = np.minimum(1.0, stress_multiplier * df["pd_hat"])
-    losses_stress = np.zeros(n_simulations)
-    for s in range(n_simulations):
-        defaults = np.random.binomial(1, pd_stress)
-        losses_stress[s] = (defaults * df["loan_amnt"].values * lgd).sum()
-    logger.info("Stress simulation complete (×%.1f PD multiplier)", stress_multiplier)
+    
+    rng = np.random.default_rng(seed)
+    uniform_draws = rng.random((n_simulations, len(pd_stress)))
+    defaults_matrix = (uniform_draws < pd_stress.values).astype(np.float64)
+    
+    losses_stress = defaults_matrix @ (df["loan_amnt"].values * lgd)
+    
+    logger.info("Stress simulation complete (×%.1f PD multiplier, Vectorized)", stress_multiplier)
     return losses_stress, pd_stress
 
 

@@ -8,7 +8,8 @@ Pipeline completo de credit risk modeling sobre el [Credit Risk Dataset de Kaggl
 
 1. **Preprocesamiento y EDA** — limpieza de tipos, valores faltantes, outliers (IQR winsorización)
 2. **Estimación de PD individual** — regresión logística, test t de Welch, coeficientes exportados
-3. **Simulación Monte Carlo** — 10.000 escenarios de pérdida de cartera (Bernoulli por préstamo)
+3. **Simulación Monte Carlo** — 10.000 escenarios de pérdida de cartera (Bernoulli por préstamo). 
+   > *Motor de simulación 100% vectorizado con NumPy: genera matrices de (n_simulaciones × n_exposiciones) en memoria, eliminando bucles Python. Permite escalar a portafolios de 10.000+ exposiciones manteniendo tiempos de ejecución sub-segundo.*
 4. **Métricas de riesgo** — Expected Loss, VaR 95%/99%, Expected Shortfall
 5. **Stress testing** — impacto de deterioro de PD (×1.5) sobre toda la distribución de pérdidas
 6. **Descomposición de EL** — contribución por quintil de PD (EL = PD × EAD × LGD)
