@@ -1,6 +1,6 @@
 metric,value
-Expected Loss,30758237.29125
-VaR 95%,31288342.5
-Expected Shortfall 95%,31423544.7075
-VaR 99%,31521875.4
-Expected Shortfall 99%,31625714.25
+Expected Loss,30755463.62625
+VaR 95%,31280874.1875
+Expected Shortfall 95%,31418651.7225
+VaR 99%,31502497.3875
+Expected Shortfall 99%,31598948.7

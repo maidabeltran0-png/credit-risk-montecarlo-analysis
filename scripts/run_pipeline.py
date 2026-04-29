@@ -128,7 +128,9 @@ def run_stage6_monte_carlo(cfg: MonteCarloConfig) -> None:
     ead_vals = df["loan_amnt"].values
 
     # Base scenario
-    losses_base = monte_carlo.simulate_losses(pd_vals, ead_vals, cfg.lgd, cfg.n_simulations)
+    losses_base = monte_carlo.simulate_losses(
+        pd_vals, ead_vals, cfg.lgd, cfg.n_simulations, cfg.random_seed
+    )
     metrics_base = monte_carlo.calculate_risk_metrics(losses_base, cfg.var_confidence_levels)
     metrics_base.to_csv(Paths.output_monte_carlo / "risk_metrics_base.csv", index=False)
 
@@ -144,7 +146,7 @@ def run_stage6_monte_carlo(cfg: MonteCarloConfig) -> None:
 
     # Stress scenario
     losses_stress, _ = monte_carlo.simulate_stress_scenario(
-        df, cfg.lgd, cfg.n_simulations, cfg.stress_pd_multiplier,
+        df, cfg.lgd, cfg.n_simulations, cfg.stress_pd_multiplier, cfg.random_seed
     )
     el_stress = losses_stress.mean()
     var_95_stress = np.percentile(losses_stress, 95)
