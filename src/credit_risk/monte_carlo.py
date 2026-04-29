@@ -44,7 +44,7 @@ def simulate_losses(
     ead_values: np.ndarray,
     lgd: float,
     n_simulations: int,
-    seed: int = 42,
+    seed: int,
 ) -> np.ndarray:
     """Simulate portfolio losses using a fully vectorized approach.
 
@@ -105,7 +105,7 @@ def simulate_stress_scenario(
     lgd: float,
     n_simulations: int,
     stress_multiplier: float,
-    seed: int = 42,
+    seed: int,
 ) -> tuple[np.ndarray, pd.Series]:
     """Run Monte Carlo under a stressed PD scenario using vectorization.
 

@@ -17,6 +17,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+from credit_risk.config import MonteCarloConfig
 from credit_risk.monte_carlo import (
     calculate_risk_metrics,
     simulate_losses,
@@ -67,6 +68,7 @@ def simulated_losses(synthetic_portfolio) -> np.ndarray:
         ead_values=df["loan_amnt"].values,
         lgd=0.45,
         n_simulations=100,
+        seed=MonteCarloConfig().random_seed,
     )
 
 
@@ -78,7 +80,7 @@ def test_simulate_losses_output_shape(synthetic_portfolio):
     """simulate_losses should return an array of length n_simulations."""
     np.random.seed(0)
     df = synthetic_portfolio
-    losses = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd=0.45, n_simulations=50)
+    losses = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd=0.45, n_simulations=50, seed=MonteCarloConfig().random_seed)
     assert losses.shape == (50,), f"Expected shape (50,), got {losses.shape}"
 
 
@@ -86,7 +88,7 @@ def test_simulate_losses_non_negative(synthetic_portfolio):
     """All simulated losses must be non-negative."""
     np.random.seed(0)
     df = synthetic_portfolio
-    losses = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd=0.45, n_simulations=200)
+    losses = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd=0.45, n_simulations=200, seed=MonteCarloConfig().random_seed)
     assert (losses >= 0).all(), "Found negative loss values"
 
 
@@ -94,9 +96,9 @@ def test_simulate_losses_reproducible(synthetic_portfolio):
     """Fixing np.random.seed should yield identical results across runs."""
     df = synthetic_portfolio
     np.random.seed(7)
-    losses_a = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd=0.45, n_simulations=100)
+    losses_a = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd=0.45, n_simulations=100, seed=MonteCarloConfig().random_seed)
     np.random.seed(7)
-    losses_b = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd=0.45, n_simulations=100)
+    losses_b = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd=0.45, n_simulations=100, seed=MonteCarloConfig().random_seed)
     np.testing.assert_array_equal(losses_a, losses_b)
 
 
@@ -141,10 +143,10 @@ def test_stress_losses_higher_than_base(synthetic_portfolio):
     """Stressed losses should exceed base losses on average (mean test)."""
     np.random.seed(42)
     df = synthetic_portfolio
-    losses_base = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, 0.45, 500)
+    losses_base = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, 0.45, 500, seed=MonteCarloConfig().random_seed)
 
     np.random.seed(42)
-    losses_stress, _ = simulate_stress_scenario(df, lgd=0.45, n_simulations=500, stress_multiplier=1.5)
+    losses_stress, _ = simulate_stress_scenario(df, lgd=0.45, n_simulations=500, stress_multiplier=1.5, seed=MonteCarloConfig().random_seed)
 
     assert losses_stress.mean() > losses_base.mean(), (
         f"Stress EL ({losses_stress.mean():.2f}) should exceed base EL ({losses_base.mean():.2f})"
@@ -156,7 +158,7 @@ def test_stress_pd_capped_at_one(synthetic_portfolio):
     np.random.seed(0)
     df = synthetic_portfolio.copy()
     df["pd_hat"] = 0.9  # High base PD; multiplier would push above 1.0
-    _, pd_stress = simulate_stress_scenario(df, lgd=0.45, n_simulations=10, stress_multiplier=2.0)
+    _, pd_stress = simulate_stress_scenario(df, lgd=0.45, n_simulations=10, stress_multiplier=2.0, seed=MonteCarloConfig().random_seed)
     assert (pd_stress <= 1.0).all(), "Stressed PDs should be capped at 1.0"
 
 
@@ -175,7 +177,7 @@ def test_simulate_losses_equivalence(synthetic_portfolio):
     legacy_losses = _legacy_simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd, n_sims)
     
     # Run vectorized
-    vectorized_losses = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd, n_sims, seed=42)
+    vectorized_losses = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd, n_sims, seed=MonteCarloConfig().random_seed)
     
     # We compare the mean (Expected Loss) and VaR 95%
     # Note: They use different RNG streams, so they won't be exactly element-wise equal,
@@ -206,7 +208,7 @@ def test_simulate_losses_performance(synthetic_portfolio):
     
     # Time vectorized
     start_vec = time.perf_counter()
-    simulate_losses(df_large["pd_hat"].values, df_large["loan_amnt"].values, lgd, n_sims, seed=42)
+    simulate_losses(df_large["pd_hat"].values, df_large["loan_amnt"].values, lgd, n_sims, seed=MonteCarloConfig().random_seed)
     time_vec = time.perf_counter() - start_vec
     
     print(f"\nLegacy time: {time_legacy:.4f}s")
