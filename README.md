@@ -104,6 +104,13 @@ La simulación Monte Carlo repite este proceso 10.000 veces para obtener la **di
 
 Python 3.12 · pandas · numpy · statsmodels · scipy · matplotlib · seaborn · lets-plot
 
+## Roadmap
+
+- [ ] Validación del modelo con KS statistic y AUC-ROC (train/test split)
+- [ ] Stress testing con Common Random Numbers (CRN) para comparación base vs. adverso vs. severamente adverso
+- [ ] Dashboard interactivo con Streamlit + Plotly
+- [ ] Auditoría de datos faltantes y pipeline de imputación
+
 ## Autora
 
 Maida Beltrán
