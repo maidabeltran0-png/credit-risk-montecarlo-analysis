@@ -53,7 +53,7 @@ credit-risk-montecarlo-analysis/
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
 # 2. Clonar el repositorio
-git clone https://github.com/maidabeltran0-png/trabajo-final-credit-risk-default.git
+git clone https://github.com/maidabeltran0-png/credit-risk-montecarlo-analysis.git
 cd credit-risk-montecarlo-analysis
 
 # 3. Instalar dependencias
