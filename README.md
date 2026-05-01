@@ -1,4 +1,7 @@
 # Credit Risk & Monte Carlo Portfolio Analysis
+![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-22c55e)
+![uv](https://img.shields.io/badge/uv-package%20manager-7C3AED)
 
 Análisis de riesgo crediticio end-to-end: desde la probabilidad individual de default hasta la distribución de pérdidas de cartera bajo escenarios de stress.
 
