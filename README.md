@@ -97,6 +97,20 @@ El modelo estima la **Probability of Default (PD)** individual con regresión lo
 
 La simulación Monte Carlo repite este proceso 10.000 veces para obtener la **distribución completa de pérdidas de cartera**.
 
+### Common Random Numbers (CRN) en Stress Testing
+
+Para comparar escenarios (Base vs. Estrés), el motor de simulación implementa **Common Random Numbers (CRN)**, una Técnica de Reducción de Varianza (VRT). El principio es:
+
+> Si un crédito "defaultea" con una extracción aleatoria U=0.62 en el escenario base, también "defaulteará" en el escenario estresado (porque su PD estresada es mayor). Estamos comparando *el mismo portafolio en condiciones distintas*, no dos realizaciones aleatorias distintas.
+
+La varianza del estimador de la diferencia `Pérdida_Estrés - Pérdida_Base` se reduce porque los dos procesos están correlacionados positivamente. Matemáticamente:
+
+```text
+Var(X_estrés - X_base) = Var(X_estrés) + Var(X_base) - 2·Cov(X_estrés, X_base)
+```
+
+Al usar CRN, la Covarianza es positiva (`Cov > 0`), lo que reduce la varianza total del comparador. Esta técnica es estándar en modelos de stress testing bajo **Basilea III** y marcos de **DFAST/CCAR** para aislar el impacto real del estrés del ruido inherente a la simulación, especialmente en métricas de cola (VaR y Expected Shortfall).
+
 ## Stack técnico
 
 Python 3.12 · pandas · numpy · statsmodels · scipy · matplotlib · seaborn · lets-plot
