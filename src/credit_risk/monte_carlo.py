@@ -45,11 +45,14 @@ def simulate_losses(
     lgd: float,
     n_simulations: int,
     seed: int,
-) -> np.ndarray:
+    uniform_draws: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
     """Simulate portfolio losses using a fully vectorized approach.
 
     Generates a full (n_simulations x n_exposures) matrix of random draws
     to avoid Python loops, resulting in sub-second execution for large portfolios.
+    If ``uniform_draws`` is provided, it uses it instead of generating a new matrix,
+    enabling Common Random Numbers (CRN) for stress testing.
 
     Args:
         pd_values: Array of individual default probabilities (length = n_loans).
@@ -57,21 +60,24 @@ def simulate_losses(
         lgd: Loss Given Default (constant proportion, e.g. 0.45).
         n_simulations: Number of Monte Carlo iterations.
         seed: Random seed for reproducibility.
+        uniform_draws: Optional pre-generated matrix of random draws.
 
     Returns:
-        Array of shape (n_simulations,) with total portfolio losses.
+        Tuple of (portfolio_losses, uniform_draws) for CRN reuse.
     """
     rng = np.random.default_rng(seed)
     
-    # Generate full matrix of uniform draws and compare against PDs
-    uniform_draws = rng.random((n_simulations, len(pd_values)))
+    # Generate full matrix of uniform draws if not provided
+    if uniform_draws is None:
+        uniform_draws = rng.random((n_simulations, len(pd_values)))
+        
     defaults_matrix = (uniform_draws < pd_values).astype(np.float64)
     
     # Compute total losses via matrix multiplication
     portfolio_losses = defaults_matrix @ (ead_values * lgd)
     
     logger.info("Base simulation complete — %d iterations (Vectorized)", n_simulations)
-    return portfolio_losses
+    return portfolio_losses, uniform_draws
 
 
 def calculate_risk_metrics(
@@ -106,11 +112,14 @@ def simulate_stress_scenario(
     n_simulations: int,
     stress_multiplier: float,
     seed: int,
+    uniform_draws: np.ndarray | None = None,
 ) -> tuple[np.ndarray, pd.Series]:
     """Run Monte Carlo under a stressed PD scenario using vectorization.
 
-    Applies ``stress_multiplier`` to ``pd_hat``, capping at 1.0,
-    then generates a full random matrix to compute stressed losses.
+    Applies ``stress_multiplier`` to ``pd_hat``, capping at 1.0.
+    Supports Common Random Numbers (CRN) by accepting a pre-generated 
+    ``uniform_draws`` matrix to accurately measure stress impact without 
+    simulation noise.
 
     Args:
         df: DataFrame with ``pd_hat`` and ``loan_amnt``.
@@ -118,14 +127,17 @@ def simulate_stress_scenario(
         n_simulations: Number of iterations.
         stress_multiplier: Factor applied to base PD (e.g. 1.5 = +50% PD).
         seed: Random seed for reproducibility.
+        uniform_draws: Optional pre-generated matrix of random draws.
 
     Returns:
         Tuple of (losses_array, stressed_pd_series).
     """
     pd_stress = np.minimum(1.0, stress_multiplier * df["pd_hat"])
     
-    rng = np.random.default_rng(seed)
-    uniform_draws = rng.random((n_simulations, len(pd_stress)))
+    if uniform_draws is None:
+        rng = np.random.default_rng(seed)
+        uniform_draws = rng.random((n_simulations, len(pd_stress)))
+        
     defaults_matrix = (uniform_draws < pd_stress.values).astype(np.float64)
     
     losses_stress = defaults_matrix @ (df["loan_amnt"].values * lgd)

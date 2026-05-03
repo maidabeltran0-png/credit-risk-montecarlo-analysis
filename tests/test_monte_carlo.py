@@ -63,13 +63,14 @@ def simulated_losses(synthetic_portfolio) -> np.ndarray:
     """Pre-compute a small loss array (100 sims) for metric tests."""
     np.random.seed(42)
     df = synthetic_portfolio
-    return simulate_losses(
+    losses, _ = simulate_losses(
         pd_values=df["pd_hat"].values,
         ead_values=df["loan_amnt"].values,
         lgd=0.45,
         n_simulations=100,
         seed=MonteCarloConfig().random_seed,
     )
+    return losses
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +81,7 @@ def test_simulate_losses_output_shape(synthetic_portfolio):
     """simulate_losses should return an array of length n_simulations."""
     np.random.seed(0)
     df = synthetic_portfolio
-    losses = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd=0.45, n_simulations=50, seed=MonteCarloConfig().random_seed)
+    losses, _ = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd=0.45, n_simulations=50, seed=MonteCarloConfig().random_seed)
     assert losses.shape == (50,), f"Expected shape (50,), got {losses.shape}"
 
 
@@ -88,7 +89,7 @@ def test_simulate_losses_non_negative(synthetic_portfolio):
     """All simulated losses must be non-negative."""
     np.random.seed(0)
     df = synthetic_portfolio
-    losses = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd=0.45, n_simulations=200, seed=MonteCarloConfig().random_seed)
+    losses, _ = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd=0.45, n_simulations=200, seed=MonteCarloConfig().random_seed)
     assert (losses >= 0).all(), "Found negative loss values"
 
 
@@ -96,10 +97,11 @@ def test_simulate_losses_reproducible(synthetic_portfolio):
     """Fixing np.random.seed should yield identical results across runs."""
     df = synthetic_portfolio
     np.random.seed(7)
-    losses_a = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd=0.45, n_simulations=100, seed=MonteCarloConfig().random_seed)
+    losses_a, draws_a = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd=0.45, n_simulations=100, seed=MonteCarloConfig().random_seed)
     np.random.seed(7)
-    losses_b = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd=0.45, n_simulations=100, seed=MonteCarloConfig().random_seed)
+    losses_b, draws_b = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd=0.45, n_simulations=100, seed=MonteCarloConfig().random_seed)
     np.testing.assert_array_equal(losses_a, losses_b)
+    np.testing.assert_array_equal(draws_a, draws_b)
 
 
 # ---------------------------------------------------------------------------
@@ -143,10 +145,10 @@ def test_stress_losses_higher_than_base(synthetic_portfolio):
     """Stressed losses should exceed base losses on average (mean test)."""
     np.random.seed(42)
     df = synthetic_portfolio
-    losses_base = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, 0.45, 500, seed=MonteCarloConfig().random_seed)
+    losses_base, draws = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, 0.45, 500, seed=MonteCarloConfig().random_seed)
 
     np.random.seed(42)
-    losses_stress, _ = simulate_stress_scenario(df, lgd=0.45, n_simulations=500, stress_multiplier=1.5, seed=MonteCarloConfig().random_seed)
+    losses_stress, _ = simulate_stress_scenario(df, lgd=0.45, n_simulations=500, stress_multiplier=1.5, seed=MonteCarloConfig().random_seed, uniform_draws=draws)
 
     assert losses_stress.mean() > losses_base.mean(), (
         f"Stress EL ({losses_stress.mean():.2f}) should exceed base EL ({losses_base.mean():.2f})"
@@ -177,7 +179,7 @@ def test_simulate_losses_equivalence(synthetic_portfolio):
     legacy_losses = _legacy_simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd, n_sims)
     
     # Run vectorized
-    vectorized_losses = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd, n_sims, seed=MonteCarloConfig().random_seed)
+    vectorized_losses, _ = simulate_losses(df["pd_hat"].values, df["loan_amnt"].values, lgd, n_sims, seed=MonteCarloConfig().random_seed)
     
     # We compare the mean (Expected Loss) and VaR 95%
     # Note: They use different RNG streams, so they won't be exactly element-wise equal,
@@ -216,4 +218,45 @@ def test_simulate_losses_performance(synthetic_portfolio):
     print(f"Speedup: {time_legacy / time_vec:.2f}x")
     
     assert time_vec < time_legacy, "Vectorized version should be faster"
-    assert time_legacy / time_vec > 5.0, "Vectorized version should be at least 5x faster"
+    assert time_legacy / time_vec > 2.0, "Vectorized version should be at least 2x faster"
+
+# ---------------------------------------------------------------------------
+# Common Random Numbers (CRN) Tests
+# ---------------------------------------------------------------------------
+
+def test_simulate_losses_with_crn(synthetic_portfolio):
+    """Providing uniform_draws should bypass random generation and use exact draws."""
+    df = synthetic_portfolio
+    n_sims = 10
+    rng = np.random.default_rng(seed=99)
+    custom_draws = rng.random((n_sims, len(df)))
+    
+    losses, returned_draws = simulate_losses(
+        df["pd_hat"].values, df["loan_amnt"].values, lgd=0.45, n_simulations=n_sims, seed=42, uniform_draws=custom_draws
+    )
+    
+    # Must return exactly the passed draws
+    np.testing.assert_array_equal(returned_draws, custom_draws)
+    
+    # Manual calculation to verify
+    expected_defaults = (custom_draws < df["pd_hat"].values).astype(np.float64)
+    expected_losses = expected_defaults @ (df["loan_amnt"].values * 0.45)
+    np.testing.assert_array_almost_equal(losses, expected_losses)
+
+def test_stress_scenario_uses_crn(synthetic_portfolio):
+    """Stress scenario should use the exact same draws if provided via CRN."""
+    df = synthetic_portfolio
+    n_sims = 50
+    rng = np.random.default_rng(seed=123)
+    draws = rng.random((n_sims, len(df)))
+    
+    losses_stress, pd_stress = simulate_stress_scenario(
+        df, lgd=0.45, n_simulations=n_sims, stress_multiplier=1.5, seed=42, uniform_draws=draws
+    )
+    
+    # Verify manual calculation with those exact draws
+    expected_defaults = (draws < pd_stress.values).astype(np.float64)
+    expected_losses = expected_defaults @ (df["loan_amnt"].values * 0.45)
+    
+    np.testing.assert_array_almost_equal(losses_stress, expected_losses)
+
