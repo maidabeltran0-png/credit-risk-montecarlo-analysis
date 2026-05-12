@@ -1,0 +1,3 @@
+metric,value,interpretation,reference
+KS Statistic,0.503,Good,BCRA / Argentine banking standard
+AUC-ROC,0.8273,Random = 0.5 | Perfect = 1.0,International ML standard

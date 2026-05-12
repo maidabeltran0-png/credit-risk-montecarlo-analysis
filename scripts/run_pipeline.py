@@ -87,10 +87,27 @@ def run_stage4_model() -> None:
     model.hypothesis_test(df, Paths.output_tables)
 
     try:
-        fitted_model = model.fit_logistic_model(df)
+        features = ["person_income", "loan_amnt", "loan_int_rate", "cb_person_cred_hist_length"]
+
+        # Validation loop (train/test split)
+        df_train, df_test = model.split_dataset(df)
+        fitted_val = model.fit_logistic_model(df_train, features=features)
+        
+        import statsmodels.api as sm
+        X_test = sm.add_constant(df_test[features])
+        y_score_test = fitted_val.predict(X_test)
+        y_true_test = df_test["loan_status"]
+
+        ks_stat = model.calculate_ks_statistic(y_true_test, y_score_test.values)
+        auc_roc = model.calculate_auc_roc(y_true_test, y_score_test.values, Paths.output_figures)
+        model.save_validation_report(ks_stat, auc_roc, Paths.output_tables)
+        logger.info("Model validation complete — KS: %.4f | AUC-ROC: %.4f", ks_stat, auc_roc)
+
+        # Fit on full dataset for Monte Carlo scoring
+        fitted_model = model.fit_logistic_model(df, features=features)
         df = model.save_model_results(
             df, fitted_model,
-            features=["person_income", "loan_amnt", "loan_int_rate", "cb_person_cred_hist_length"],
+            features=features,
             output_tables=Paths.output_tables,
             output_figures=Paths.output_figures,
         )

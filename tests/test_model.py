@@ -82,3 +82,41 @@ def test_pd_hat_negatively_correlated_with_income(synthetic_credit_data):
     df["pd_hat"] = fitted.predict(X)
     corr = df[["person_income", "pd_hat"]].corr().loc["person_income", "pd_hat"]
     assert corr < 0, f"Expected negative correlation income/PD, got {corr:.4f}"
+
+
+def test_ks_statistic_range(synthetic_credit_data):
+    """KS statistic must be in [0, 1] for any binary classification output."""
+    import statsmodels.api as sm
+    from credit_risk.model import calculate_ks_statistic
+    features = ["person_income", "loan_amnt", "loan_int_rate", "cb_person_cred_hist_length"]
+    fitted = fit_logistic_model(synthetic_credit_data, features=features)
+    X = sm.add_constant(synthetic_credit_data[features])
+    y_score = fitted.predict(X).values
+    y_true = synthetic_credit_data["loan_status"]
+    ks = calculate_ks_statistic(y_true, y_score)
+    assert 0.0 <= ks <= 1.0
+
+
+def test_split_preserves_class_balance(synthetic_credit_data):
+    """Stratified split should keep default rate similar in train and test."""
+    from credit_risk.model import split_dataset
+    df_train, df_test = split_dataset(synthetic_credit_data, test_size=0.2)
+    overall_rate = synthetic_credit_data["loan_status"].mean()
+    train_rate = df_train["loan_status"].mean()
+    test_rate = df_test["loan_status"].mean()
+    assert abs(train_rate - overall_rate) < 0.05
+    assert abs(test_rate - overall_rate) < 0.05
+
+
+def test_auc_roc_above_random(synthetic_credit_data):
+    """A logistic model on non-trivial synthetic data should beat random (AUC > 0.5)."""
+    from sklearn.metrics import roc_auc_score
+    import statsmodels.api as sm
+    from credit_risk.model import split_dataset
+    features = ["person_income", "loan_amnt", "loan_int_rate", "cb_person_cred_hist_length"]
+    df_train, df_test = split_dataset(synthetic_credit_data)
+    fitted = fit_logistic_model(df_train, features=features)
+    X_test = sm.add_constant(df_test[features])
+    y_score = fitted.predict(X_test).values
+    auc = roc_auc_score(df_test["loan_status"], y_score)
+    assert auc > 0.5, f"AUC-ROC should exceed random baseline, got {auc:.4f}"

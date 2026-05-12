@@ -114,13 +114,22 @@ Var(X_estrés - X_base) = Var(X_estrés) + Var(X_base) - 2·Cov(X_estrés, X_bas
 
 Al usar CRN, la Covarianza es positiva (`Cov > 0`), lo que reduce la varianza total del comparador. Esta técnica es estándar en modelos de stress testing bajo **Basilea III** y marcos de **DFAST/CCAR** para aislar el impacto real del estrés del ruido inherente a la simulación, especialmente en métricas de cola (VaR y Expected Shortfall).
 
+## Validación del modelo
+
+| Métrica | Valor | Benchmark |
+|---|---|---|
+| **KS Statistic** | 0.503 | Estándar bancario ARG: >0.30 aceptable |
+| **AUC-ROC** | 0.8273 | Baseline random: 0.50 |
+
+El modelo es validado en un hold-out set (20% del dataset, split estratificado) para garantizar que las métricas sean out-of-sample. El scoring final (`pd_hat`) se genera refiteando sobre el dataset completo para maximizar el poder predictivo en la simulación Monte Carlo.
+
 ## Stack técnico
 
 Python 3.12 · pandas · numpy · statsmodels · scipy · matplotlib · seaborn · lets-plot
 
 ## Roadmap
 
-- [ ] Validación del modelo con KS statistic y AUC-ROC (train/test split)
+- [x] Validación del modelo con KS statistic y AUC-ROC (train/test split)
 - [ ] Stress testing con Common Random Numbers (CRN) para comparación base vs. adverso vs. severamente adverso
 - [ ] Dashboard interactivo con Streamlit + Plotly
 - [ ] Auditoría de datos faltantes y pipeline de imputación
