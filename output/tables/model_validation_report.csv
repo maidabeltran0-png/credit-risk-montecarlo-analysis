@@ -1,3 +1,4 @@
 metric,value,interpretation,reference
 KS Statistic,0.503,Good,BCRA / Argentine banking standard
+KS p-value,0.0,< 0.05 → separation is statistically significant,scipy.stats.ks_2samp two-sided test
 AUC-ROC,0.8273,Random = 0.5 | Perfect = 1.0,International ML standard

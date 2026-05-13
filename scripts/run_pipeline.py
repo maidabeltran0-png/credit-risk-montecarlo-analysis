@@ -34,6 +34,8 @@ if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
 import numpy as np
+import pandas as pd
+import statsmodels.api as sm
 
 from credit_risk.config import MonteCarloConfig, Paths
 from credit_risk.logger_config import get_logger
@@ -90,17 +92,25 @@ def run_stage4_model() -> None:
         features = ["person_income", "loan_amnt", "loan_int_rate", "cb_person_cred_hist_length"]
 
         # Validation loop (train/test split)
-        df_train, df_test = model.split_dataset(df)
+        split = model.split_dataset(df)
+        df_train, df_test = split.train, split.test
         fitted_val = model.fit_logistic_model(df_train, features=features)
         
-        import statsmodels.api as sm
         X_test = sm.add_constant(df_test[features])
         y_score_test = fitted_val.predict(X_test)
         y_true_test = df_test["loan_status"]
 
-        ks_stat = model.calculate_ks_statistic(y_true_test, y_score_test.values)
+        ks_stat, ks_pvalue = model.calculate_ks_statistic(y_true_test, y_score_test.values)
         auc_roc = model.calculate_auc_roc(y_true_test, y_score_test.values, Paths.output_figures)
-        model.save_validation_report(ks_stat, auc_roc, Paths.output_tables)
+        model.save_validation_report(ks_stat, ks_pvalue, auc_roc, Paths.output_tables)
+        
+        model.plot_ks_distributions(
+            y_true_test,
+            y_score_test.values,
+            ks_stat,
+            Paths.output_figures,
+        )
+        logger.info("Validation charts complete — roc_curve.png + ks_distributions.png")
         logger.info("Model validation complete — KS: %.4f | AUC-ROC: %.4f", ks_stat, auc_roc)
 
         # Fit on full dataset for Monte Carlo scoring

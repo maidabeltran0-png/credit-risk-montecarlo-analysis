@@ -119,9 +119,21 @@ Al usar CRN, la Covarianza es positiva (`Cov > 0`), lo que reduce la varianza to
 | Métrica | Valor | Benchmark |
 |---|---|---|
 | **KS Statistic** | 0.503 | Estándar bancario ARG: >0.30 aceptable |
+| **KS p-value** | < 0.001 | < 0.05 → separación estadísticamente significativa |
 | **AUC-ROC** | 0.8273 | Baseline random: 0.50 |
 
-El modelo es validado en un hold-out set (20% del dataset, split estratificado) para garantizar que las métricas sean out-of-sample. El scoring final (`pd_hat`) se genera refiteando sobre el dataset completo para maximizar el poder predictivo en la simulación Monte Carlo.
+### Gráficos de diagnóstico
+
+**Distribución de scores por clase** — el gráfico central en informes de validación BCRA:
+![KS Distributions](output/figures/ks_distributions.png)
+
+**Curva ROC:**
+![ROC Curve](output/figures/roc_curve.png)
+
+El modelo se valida en un hold-out set (20% del dataset, split estratificado)
+para garantizar métricas out-of-sample. El scoring final (`pd_hat`) se genera
+refiteando sobre el dataset completo para maximizar el poder predictivo en la
+simulación Monte Carlo.
 
 ## Stack técnico
 
