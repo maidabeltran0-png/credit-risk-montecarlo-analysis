@@ -86,6 +86,18 @@ uv run jupyter lab notebooks/exploracion_completa.ipynb
 uv run pytest tests/ -v
 ```
 
+### Dashboard interactivo (Streamlit)
+
+Permite parametrizar el portafolio y ejecutar simulaciones Monte Carlo en tiempo real con visualizaciones de Plotly.
+
+```powershell
+# 1. Instalar el proyecto en modo editable y dependencias
+uv pip install -e .
+
+# 2. Lanzar la aplicación
+uv run streamlit run app.py
+```
+
 ## Contexto financiero
 
 | Métrica | Qué mide |
@@ -143,7 +155,7 @@ Python 3.12 · pandas · numpy · statsmodels · scipy · matplotlib · seaborn 
 
 - [x] Stress testing con Common Random Numbers (CRN) para comparación base vs. adverso vs. severamente adverso
 - [x] Validación del modelo con KS statistic y AUC-ROC (train/test split)
-- [ ] Dashboard interactivo con Streamlit + Plotly
+- [x] Dashboard interactivo con Streamlit + Plotly
 - [ ] Auditoría de datos faltantes y pipeline de imputación
 
 ## Autora
