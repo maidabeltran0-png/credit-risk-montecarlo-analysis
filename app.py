@@ -1,4 +1,12 @@
+import sys
+from pathlib import Path
 import streamlit as st
+
+# Agregar 'src' al path para que el módulo 'credit_risk' sea visible en Streamlit Cloud
+src_path = str(Path(__file__).parent / "src")
+if src_path not in sys.path:
+    sys.path.append(src_path)
+
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
